@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kisan Cool Container (KCC) - Agricultural Cold-Chain & Asset Logistics</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Production-grade Agricultural Cold-Chain & Asset Logistics IoT Platform with ESP32, LoRa 433MHz, Farmer Privacy Hashing, and Glassmorphic Telemetry Dashboard.">
+  <meta name="keywords" content="smart agriculture, cold chain iot, esp32 lora, lora 433mhz, farmer privacy, ethylene monitoring, logistics shock sensor">
+  <meta name="author" content="Kisan Cool Container Systems">
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Glassmorphic Navigation Bar -->
+  <header class="app-header" id="appHeader">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-logo-badge">
+          <i data-lucide="snowflake" class="logo-icon-cool"></i>
+          <i data-lucide="sprout" class="logo-icon-leaf"></i>
+        </div>
+        <div class="brand-titles">
+          <div class="brand-name">
+            <span class="brand-title">Kisan Cool Container</span>
+            <span class="brand-pill">KCC-PROD</span>
+          </div>
+          <p class="brand-subtitle">Smart Agricultural Cold-Chain & Rural Asset Logistics</p>
+        </div>
+      </div>
+
+      <!-- Hardware & Network Connectivity Status Pills -->
+      <div class="header-network-pills">
+        <div class="status-pill" id="esp32Pill" title="Physical ESP32 Microcontroller Node">
+          <span class="pulse-dot green"></span>
+          <span class="pill-label">NODE:</span>
+          <span class="pill-val">ESP32 DevKit</span>
+        </div>
+
+        <div class="status-pill" id="loraPill" title="SX1278 LoRa Transceiver 433 MHz">
+          <i data-lucide="radio" class="pill-icon"></i>
+          <span class="pill-label">LoRa 433MHz:</span>
+          <span class="pill-val" id="loraStatusText">SF9 / 125kHz</span>
+        </div>
+
+        <div class="status-pill" id="signalPill" title="RF Link Quality">
+          <i data-lucide="activity" class="pill-icon"></i>
+          <span class="pill-label">RSSI:</span>
+          <span class="pill-val" id="rssiVal">-74 dBm</span>
+          <span class="pill-separator">|</span>
+          <span class="pill-label">SNR:</span>
+          <span class="pill-val" id="snrVal">9.4 dB</span>
+        </div>
+
+        <div class="status-pill ws-pill" id="wsPill" title="Live WebSocket Stream">
+          <span class="pulse-dot green" id="wsDot"></span>
+          <span class="pill-label">STREAM:</span>
+          <span class="pill-val" id="wsStatusText">LIVE WS</span>
+        </div>
+      </div>
+
+      <!-- Container Selector & Quick Controls -->
+      <div class="header-actions">
+        <div class="container-badge">
+          <i data-lucide="container" class="badge-icon"></i>
+          <select id="containerSelect" class="glass-select" aria-label="Select Container Unit">
+            <option value="KCC-001">Unit KCC-001 (Nashik Express)</option>
+            <option value="KCC-002">Unit KCC-002 (Theni Reefer)</option>
+            <option value="KCC-003">Unit KCC-003 (Kolar Cluster)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Simulation & Stress-Test Action Bar -->
+    <div class="simulation-banner">
+      <div class="sim-label">
+        <i data-lucide="cpu" class="sim-icon"></i>
+        <span>Hardware Simulation & Stress Injectors:</span>
+      </div>
+      <div class="sim-buttons-group">
+        <button class="btn-sim-chip" id="btnSimRoadShock" title="Simulate vehicle hitting a heavy pothole (MPU6050 Shock >2.0G)">
+          <i data-lucide="zap"></i> Pothole Shock (2.6G)
+        </button>
+        <button class="btn-sim-chip" id="btnSimThermalBreach" title="Simulate compressor failure or door open (Temp >12°C)">
+          <i data-lucide="flame"></i> Thermal Breach (12.8°C)
+        </button>
+        <button class="btn-sim-chip" id="btnSimEthyleneSpike" title="Simulate over-ripe produce emitting ethylene surge (>4.5 ppm)">
+          <i data-lucide="biohazard"></i> Ethylene Surge (4.6 ppm)
+        </button>
+        <button class="btn-sim-chip" id="btnSimOfflineSync" title="Simulate ESP32 reconnecting after rural out-of-range transit and syncing SPIFFS flash buffer">
+          <i data-lucide="refresh-cw"></i> Flash Offline Sync
+        </button>
+        <button class="btn-sim-chip reset" id="btnSimResetOptimal" title="Restore container to optimal 4°C cold-chain setpoints">
+          <i data-lucide="check-circle-2"></i> Reset Optimal
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-layout">
+
+    <!-- 1. LIVE TELEMETRY KPI METRICS GRID -->
+    <section class="kpi-section" aria-label="Key Sensor Telemetry Metrics">
+      <div class="kpi-grid">
+        
+        <!-- Metric 1: Temperature -->
+        <div class="glass-card kpi-card" id="cardTemp">
+          <div class="kpi-header">
+            <div class="kpi-title-wrap">
+              <div class="kpi-icon-box cold">
+                <i data-lucide="thermometer-snowflake"></i>
+              </div>
+              <div>
+                <h2 class="kpi-title">Cargo Temperature</h2>
+                <span class="kpi-subtitle">DHT22 Digital Sensor (GPIO 4)</span>
+              </div>
+            </div>
+            <span class="status-tag optimal" id="tempStatusTag">OPTIMAL</span>
+          </div>
+
+          <div class="kpi-value-row">
+            <span class="kpi-big-num" id="valTemp">4.2</span>
+            <span class="kpi-unit">°C</span>
+          </div>
+
+          <div class="kpi-footer-stats">
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Set Target:</span>
+              <span class="stat-val">2.0°C - 6.5°C</span>
+            </div>
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Flash Bounds:</span>
+              <span class="stat-val" id="tempBounds">3.8°C / 4.6°C</span>
+            </div>
+          </div>
+          <div class="kpi-progress-bar">
+            <div class="progress-fill temp-fill" id="tempProgressFill" style="width: 42%;"></div>
+          </div>
+        </div>
+
+        <!-- Metric 2: Humidity -->
+        <div class="glass-card kpi-card" id="cardHumidity">
+          <div class="kpi-header">
+            <div class="kpi-title-wrap">
+              <div class="kpi-icon-box humidity">
+                <i data-lucide="droplets"></i>
+              </div>
+              <div>
+                <h2 class="kpi-title">Relative Humidity</h2>
+                <span class="kpi-subtitle">Capacitive Sensing (% RH)</span>
+              </div>
+            </div>
+            <span class="status-tag optimal" id="humStatusTag">IDEAL</span>
+          </div>
+
+          <div class="kpi-value-row">
+            <span class="kpi-big-num" id="valHumidity">89.4</span>
+            <span class="kpi-unit">%</span>
+          </div>
+
+          <div class="kpi-footer-stats">
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Preservation Target:</span>
+              <span class="stat-val">85% - 95%</span>
+            </div>
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Condensation:</span>
+              <span class="stat-val safe" id="valCondensation">Zero Risk</span>
+            </div>
+          </div>
+          <div class="kpi-progress-bar">
+            <div class="progress-fill hum-fill" id="humProgressFill" style="width: 89%;"></div>
+          </div>
+        </div>
+
+        <!-- Metric 3: Ethylene Gas -->
+        <div class="glass-card kpi-card" id="cardEthylene">
+          <div class="kpi-header">
+            <div class="kpi-title-wrap">
+              <div class="kpi-icon-box ethylene">
+                <i data-lucide="wind"></i>
+              </div>
+              <div>
+                <h2 class="kpi-title">Ethylene Gas (C₂H₄)</h2>
+                <span class="kpi-subtitle">MQ-Gas ADC1 (GPIO 34)</span>
+              </div>
+            </div>
+            <span class="status-tag optimal" id="ethStatusTag">BASAL</span>
+          </div>
+
+          <div class="kpi-value-row">
+            <span class="kpi-big-num" id="valEthylene">0.72</span>
+            <span class="kpi-unit">ppm</span>
+          </div>
+
+          <div class="kpi-footer-stats">
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Spoilage Threshold:</span>
+              <span class="stat-val">&gt; 2.50 ppm</span>
+            </div>
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Ripening Velocity:</span>
+              <span class="stat-val" id="valRipening">Controlled</span>
+            </div>
+          </div>
+          <div class="kpi-progress-bar">
+            <div class="progress-fill eth-fill" id="ethProgressFill" style="width: 28%;"></div>
+          </div>
+        </div>
+
+        <!-- Metric 4: Vibration & Shock -->
+        <div class="glass-card kpi-card" id="cardVibration">
+          <div class="kpi-header">
+            <div class="kpi-title-wrap">
+              <div class="kpi-icon-box shock">
+                <i data-lucide="activity"></i>
+              </div>
+              <div>
+                <h2 class="kpi-title">Road Shock & Vibration</h2>
+                <span class="kpi-subtitle">MPU6050 3-Axis I2C (0x68)</span>
+              </div>
+            </div>
+            <span class="status-tag optimal" id="shockStatusTag">SMOOTH</span>
+          </div>
+
+          <div class="kpi-value-row">
+            <span class="kpi-big-num" id="valVibration">0.08</span>
+            <span class="kpi-unit">G</span>
+          </div>
+
+          <div class="kpi-footer-stats">
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Peak Impact:</span>
+              <span class="stat-val" id="valPeakShock">0.24 G</span>
+            </div>
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Road Grade:</span>
+              <span class="stat-val" id="valRoadGrade">ISO Class A</span>
+            </div>
+          </div>
+          <div class="kpi-progress-bar">
+            <div class="progress-fill shock-fill" id="shockProgressFill" style="width: 12%;"></div>
+          </div>
+        </div>
+
+        <!-- Metric 5: Battery & Backup Power -->
+        <div class="glass-card kpi-card" id="cardPower">
+          <div class="kpi-header">
+            <div class="kpi-title-wrap">
+              <div class="kpi-icon-box battery">
+                <i data-lucide="battery-charging"></i>
+              </div>
+              <div>
+                <h2 class="kpi-title">Cold Unit Power</h2>
+                <span class="kpi-subtitle">Li-Ion / Solar Hybrid</span>
+              </div>
+            </div>
+            <span class="status-tag optimal" id="powerStatusTag">BACKED UP</span>
+          </div>
+
+          <div class="kpi-value-row">
+            <span class="kpi-big-num" id="valBatteryPct">94</span>
+            <span class="kpi-unit">%</span>
+          </div>
+
+          <div class="kpi-footer-stats">
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Cell Voltage:</span>
+              <span class="stat-val" id="valBatteryVolts">4.08 V</span>
+            </div>
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Autonomous Time:</span>
+              <span class="stat-val">38 hrs</span>
+            </div>
+          </div>
+          <div class="kpi-progress-bar">
+            <div class="progress-fill batt-fill" id="battProgressFill" style="width: 94%;"></div>
+          </div>
+        </div>
+
+        <!-- Metric 6: Stored Cargo Weight -->
+        <div class="glass-card kpi-card" id="cardCapacity">
+          <div class="kpi-header">
+            <div class="kpi-title-wrap">
+              <div class="kpi-icon-box cargo">
+                <i data-lucide="package-check"></i>
+              </div>
+              <div>
+                <h2 class="kpi-title">Cargo Capacity</h2>
+                <span class="kpi-subtitle">20ft Insulated Container</span>
+              </div>
+            </div>
+            <span class="status-tag optimal">85% LOAD</span>
+          </div>
+
+          <div class="kpi-value-row">
+            <span class="kpi-big-num" id="valTotalKg">4,250</span>
+            <span class="kpi-unit">kg</span>
+          </div>
+
+          <div class="kpi-footer-stats">
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Active Batches:</span>
+              <span class="stat-val" id="valActiveBatchesCount">2 Farmers</span>
+            </div>
+            <div class="footer-stat-item">
+              <span class="stat-lbl">Max Payload:</span>
+              <span class="stat-val">5,000 kg</span>
+            </div>
+          </div>
+          <div class="kpi-progress-bar">
+            <div class="progress-fill cargo-fill" style="width: 85%;"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 2. INTERACTIVE 2D CARGO COMPARTMENT HEATMAP LAYOUT -->
+    <section class="cargo-section" aria-label="Interactive 2D Cargo Compartment Layout">
+      <div class="glass-card cargo-container-card">
+        <div class="section-card-header">
+          <div class="header-left">
+            <div class="section-icon-box">
+              <i data-lucide="grid"></i>
+            </div>
+            <div>
+              <h2 class="section-title">Interactive 2D Cargo Compartment Thermal & Gas Map</h2>
+              <p class="section-subtitle">Real-time spatial microclimate distribution across container racking zones. Click any zone to inspect localized produce & shelf life.</p>
+            </div>
+          </div>
+          <div class="heatmap-legend">
+            <div class="legend-item"><span class="legend-dot optimal"></span> Optimal (2 - 6.5°C)</div>
+            <div class="legend-item"><span class="legend-dot warning"></span> Caution (7 - 9.5°C)</div>
+            <div class="legend-item"><span class="legend-dot critical"></span> Critical (&gt; 9.5°C / &gt;3ppm)</div>
+          </div>
+        </div>
+
+        <!-- 2D Container Architectural Cross-Section -->
+        <div class="cargo-bay-wrapper">
+          
+          <!-- Cooling Evaporator Unit Header (Front) -->
+          <div class="evaporator-unit">
+            <div class="evaporator-header">
+              <i data-lucide="fan" class="fan-icon spinning"></i>
+              <span>PRIMARY CHILLER / EVAPORATOR UNIT</span>
+            </div>
+            <div class="airflow-indicator">
+              <span>Airflow: 850 CFM</span>
+              <i data-lucide="chevrons-right"></i>
+            </div>
+          </div>
+
+          <!-- Cargo Grid Layout (6 pallet zones + 1 door seal zone) -->
+          <div class="cargo-grid" id="cargoGrid">
+            
+            <!-- Zone 1: Front Top -->
+            <div class="cargo-zone-card optimal" id="zone-front-top" data-zone="front-top" role="button" tabindex="0">
+              <div class="zone-badge">ZONE 1: FRONT-TOP</div>
+              <div class="zone-temp" id="zt-front-top">4.0°C</div>
+              <div class="zone-metrics">
+                <span><i data-lucide="droplet"></i> <span id="zh-front-top">90.1%</span></span>
+                <span><i data-lucide="wind"></i> <span id="ze-front-top">0.65 ppm</span></span>
+              </div>
+              <div class="zone-lot-tag" id="zlot-front-top">Empty / Reserve</div>
+            </div>
+
+            <!-- Zone 2: Front Bottom -->
+            <div class="cargo-zone-card optimal" id="zone-front-bottom" data-zone="front-bottom" role="button" tabindex="0">
+              <div class="zone-badge">ZONE 2: FRONT-BOTTOM</div>
+              <div class="zone-temp" id="zt-front-bottom">3.8°C</div>
+              <div class="zone-metrics">
+                <span><i data-lucide="droplet"></i> <span id="zh-front-bottom">91.2%</span></span>
+                <span><i data-lucide="wind"></i> <span id="ze-front-bottom">0.60 ppm</span></span>
+              </div>
+              <div class="zone-lot-tag active" id="zlot-front-bottom">LOT-MH-2026-114 (Grapes)</div>
+            </div>
+
+            <!-- Zone 3: Mid Top -->
+            <div class="cargo-zone-card optimal" id="zone-mid-top" data-zone="mid-top" role="button" tabindex="0">
+              <div class="zone-badge">ZONE 3: MID-TOP</div>
+              <div class="zone-temp" id="zt-mid-top">4.3°C</div>
+              <div class="zone-metrics">
+                <span><i data-lucide="droplet"></i> <span id="zh-mid-top">88.8%</span></span>
+                <span><i data-lucide="wind"></i> <span id="ze-mid-top">0.75 ppm</span></span>
+              </div>
+              <div class="zone-lot-tag active" id="zlot-mid-top">LOT-TN-2026-081 (Tomatoes)</div>
+            </div>
+
+            <!-- Zone 4: Mid Bottom -->
+            <div class="cargo-zone-card optimal" id="zone-mid-bottom" data-zone="mid-bottom" role="button" tabindex="0">
+              <div class="zone-badge">ZONE 4: MID-BOTTOM</div>
+              <div class="zone-temp" id="zt-mid-bottom">4.1°C</div>
+              <div class="zone-metrics">
+                <span><i data-lucide="droplet"></i> <span id="zh-mid-bottom">89.5%</span></span>
+                <span><i data-lucide="wind"></i> <span id="ze-mid-bottom">0.70 ppm</span></span>
+              </div>
+              <div class="zone-lot-tag" id="zlot-mid-bottom">Empty / Reserve</div>
+            </div>
+
+            <!-- Zone 5: Rear Top -->
+            <div class="cargo-zone-card optimal" id="zone-rear-top" data-zone="rear-top" role="button" tabindex="0">
+              <div class="zone-badge">ZONE 5: REAR-TOP</div>
+              <div class="zone-temp" id="zt-rear-top">4.6°C</div>
+              <div class="zone-metrics">
+                <span><i data-lucide="droplet"></i> <span id="zh-rear-top">87.6%</span></span>
+                <span><i data-lucide="wind"></i> <span id="ze-rear-top">0.82 ppm</span></span>
+              </div>
+              <div class="zone-lot-tag" id="zlot-rear-top">Empty / Reserve</div>
+            </div>
+
+            <!-- Zone 6: Rear Bottom -->
+            <div class="cargo-zone-card optimal" id="zone-rear-bottom" data-zone="rear-bottom" role="button" tabindex="0">
+              <div class="zone-badge">ZONE 6: REAR-BOTTOM</div>
+              <div class="zone-temp" id="zt-rear-bottom">4.4°C</div>
+              <div class="zone-metrics">
+                <span><i data-lucide="droplet"></i> <span id="zh-rear-bottom">88.2%</span></span>
+                <span><i data-lucide="wind"></i> <span id="ze-rear-bottom">0.78 ppm</span></span>
+              </div>
+              <div class="zone-lot-tag" id="zlot-rear-bottom">Empty / Reserve</div>
+            </div>
+
+            <!-- Zone 7: Door Zone / Thermal Barrier -->
+            <div class="cargo-zone-card door optimal" id="zone-door-zone" data-zone="door-zone" role="button" tabindex="0">
+              <div class="zone-badge">ZONE 7: REAR DOOR SEAL</div>
+              <div class="zone-temp" id="zt-door-zone">5.1°C</div>
+              <div class="zone-metrics">
+                <span><i data-lucide="droplet"></i> <span id="zh-door-zone">85.4%</span></span>
+                <span><i data-lucide="wind"></i> <span id="ze-door-zone">0.90 ppm</span></span>
+              </div>
+              <div class="zone-lot-tag" id="zlot-door-zone">Thermal Air Curtain</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Selected Zone Detail Drawer / Callout -->
+        <div class="zone-detail-panel" id="zoneDetailPanel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <i data-lucide="layers" class="panel-icon"></i>
+              <h3 id="panelZoneTitle">Compartment Detail: Zone 3 (Mid-Top)</h3>
+            </div>
+            <span class="status-tag optimal" id="panelZoneStatusTag">OPTIMAL PRESERVATION</span>
+          </div>
+          <div class="panel-stats-grid">
+            <div class="panel-stat">
+              <span class="ps-lbl">Local Temp:</span>
+              <span class="ps-val" id="psTemp">4.3 °C</span>
+            </div>
+            <div class="panel-stat">
+              <span class="ps-lbl">Local Humidity:</span>
+              <span class="ps-val" id="psHum">88.8 %</span>
+            </div>
+            <div class="panel-stat">
+              <span class="ps-lbl">Ethylene Concentration:</span>
+              <span class="ps-val" id="psEth">0.75 ppm</span>
+            </div>
+            <div class="panel-stat">
+              <span class="ps-lbl">Assigned Crop Lot:</span>
+              <span class="ps-val highlighted" id="psLot">LOT-TN-2026-081 (Tomatoes, 1,850 kg)</span>
+            </div>
+            <div class="panel-stat">
+              <span class="ps-lbl">Farmer Origin:</span>
+              <span class="ps-val" id="psFarmer">M. Ramanathan (Theni Valley Cluster)</span>
+            </div>
+            <div class="panel-stat">
+              <span class="ps-lbl">Estimated Remaining Shelf Life:</span>
+              <span class="ps-val green" id="psShelfLife">19.4 Days (Preservation Index: 95.2%)</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 3. LIVE ANIMATED DUAL TELEMETRY CHARTS -->
+    <section class="charts-section" aria-label="Live Sensor Telemetry Charts">
+      <div class="charts-grid">
+        
+        <!-- Chart 1: Temperature & Humidity Dual-Axis -->
+        <div class="glass-card chart-card">
+          <div class="section-card-header">
+            <div class="header-left">
+              <div class="section-icon-box cold">
+                <i data-lucide="trending-up"></i>
+              </div>
+              <div>
+                <h3 class="section-title">Thermal & Humidity Telemetry Trend</h3>
+                <p class="section-subtitle">Dual-axis live dynamic buffer (DHT22 Sensor)</p>
+              </div>
+            </div>
+            <div class="chart-live-badge">
+              <span class="pulse-dot green"></span> Live 5s Feed
+            </div>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="tempHumChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Ethylene & Road Vibration Dual-Axis -->
+        <div class="glass-card chart-card">
+          <div class="section-card-header">
+            <div class="header-left">
+              <div class="section-icon-box ethylene">
+                <i data-lucide="activity"></i>
+              </div>
+              <div>
+                <h3 class="section-title">Ethylene Gas & Road Vibration Shock</h3>
+                <p class="section-subtitle">MQ Gas Sensor (ppm) & MPU6050 3-Axis Shock (G)</p>
+              </div>
+            </div>
+            <div class="chart-live-badge">
+              <span class="pulse-dot green"></span> Live 5s Feed
+            </div>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="ethVibChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 4. LOGISTICS WORKFLOWS: FARMER PRIVACY & DRIVER ASSIGNMENT -->
+    <section class="forms-section" aria-label="Farmer Privacy and Driver Logistics Operations">
+      <div class="forms-grid">
+
+        <!-- Column A: Farmer Privacy & Produce Ingestion -->
+        <div class="glass-card form-card">
+          <div class="section-card-header">
+            <div class="header-left">
+              <div class="section-icon-box leaf">
+                <i data-lucide="shield-check"></i>
+              </div>
+              <div>
+                <h3 class="section-title">Farmer Produce Ingestion Portal</h3>
+                <p class="section-subtitle">Zero-Knowledge Farmer Privacy with SHA-256 Client-Side Hashing & Masked PII Storage</p>
+              </div>
+            </div>
+            <div class="privacy-guarantee-pill">
+              <i data-lucide="lock"></i> SHA-256 Protected
+            </div>
+          </div>
+
+          <form id="farmerUploadForm" class="kcc-form">
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="farmerName">Farmer Full Name <span class="req">*</span></label>
+                <div class="input-icon-wrap">
+                  <i data-lucide="user"></i>
+                  <input type="text" id="farmerName" placeholder="e.g. M. Ramanathan" required autocomplete="name">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="farmerPhone">Mobile Contact (Encrypted) <span class="req">*</span></label>
+                <div class="input-icon-wrap">
+                  <i data-lucide="phone"></i>
+                  <input type="tel" id="farmerPhone" placeholder="+91 98765 43210" required autocomplete="tel">
+                </div>
+                <div class="privacy-preview" id="privacyPreview">
+                  <span>Privacy Mask: <strong id="previewMaskedPhone">+91 98*** **210</strong></span>
+                  <span class="hash-preview" id="previewHash">SHA: e3b0c44298...</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row three-col">
+              <div class="form-group">
+                <label for="cropType">Crop Variety <span class="req">*</span></label>
+                <select id="cropType" class="glass-select-input" required>
+                  <option value="Tomatoes">Tomatoes (Solanum lycopersicum)</option>
+                  <option value="Alphonso Mangoes">Alphonso Mangoes (Mangifera indica)</option>
+                  <option value="Shimla Apples">Shimla Apples (Malus domestica)</option>
+                  <option value="Grapes">Grapes (Vitis vinifera)</option>
+                  <option value="Capsicum">Capsicum / Bell Peppers</option>
+                  <option value="Exotic Strawberries">Exotic Strawberries</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="quantityKg">Batch Weight (kg) <span class="req">*</span></label>
+                <div class="input-icon-wrap">
+                  <i data-lucide="scale"></i>
+                  <input type="number" id="quantityKg" placeholder="1850" min="50" max="5000" step="10" required>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="qualityGrade">Quality Grade</label>
+                <select id="qualityGrade" class="glass-select-input">
+                  <option value="Grade-A Export">Grade-A Export (Zero Blemishes)</option>
+                  <option value="Export Premium">Export Premium Grade</option>
+                  <option value="Domestic Mandi A">Domestic Mandi Grade-A</option>
+                  <option value="Processing Grade">Processing / Pulp Grade</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="harvestLocality">Harvest Geolocation Preset</label>
+                <select id="harvestLocality" class="glass-select-input">
+                  <option value="Theni Valley Cluster" data-lat="10.0104" data-lng="77.4768">Theni Agri Valley Cluster (TN)</option>
+                  <option value="Nashik Vineyard Zone 4" data-lat="19.9975" data-lng="73.7898">Nashik Vineyard Cluster (MH)</option>
+                  <option value="Kolar Tomato Mandi Hub" data-lat="13.1367" data-lng="78.1291">Kolar Tomato Mandi Hub (KA)</option>
+                  <option value="Shimla Apple Orchard Valley" data-lat="31.1048" data-lng="77.1734">Shimla Apple Orchards (HP)</option>
+                  <option value="Nilgiris Strawberry Farm" data-lat="11.4102" data-lng="76.6950">Nilgiris Organic Highlands (TN)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="assignedZoneSelect">Assigned Cargo Compartment</label>
+                <select id="assignedZoneSelect" class="glass-select-input">
+                  <option value="mid-top">Zone 3: Mid-Top (High Airflow)</option>
+                  <option value="front-bottom">Zone 2: Front-Bottom (Chilled)</option>
+                  <option value="front-top">Zone 1: Front-Top</option>
+                  <option value="mid-bottom">Zone 4: Mid-Bottom</option>
+                  <option value="rear-top">Zone 5: Rear-Top</option>
+                  <option value="rear-bottom">Zone 6: Rear-Bottom</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-action-row">
+              <button type="submit" class="btn-primary" id="btnSubmitFarmerBatch">
+                <i data-lucide="plus-circle"></i> Register Encrypted Produce Batch
+              </button>
+            </div>
+          </form>
+
+          <!-- Active Masked Farmer Batches Table -->
+          <div class="batches-table-wrapper">
+            <h4 class="table-title">Active Loaded Produce Batches</h4>
+            <div class="table-responsive">
+              <table class="kcc-table" id="farmerBatchesTable">
+                <thead>
+                  <tr>
+                    <th>Batch Lot ID</th>
+                    <th>Farmer Name</th>
+                    <th>Masked Phone</th>
+                    <th>Crop</th>
+                    <th>Qty</th>
+                    <th>Zone</th>
+                    <th>Shelf Life Est.</th>
+                    <th>Crypto Token</th>
+                  </tr>
+                </thead>
+                <tbody id="farmerBatchesTbody">
+                  <!-- Populated dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Column B: Driver Logistics & Vehicle Assignment -->
+        <div class="glass-card form-card">
+          <div class="section-card-header">
+            <div class="header-left">
+              <div class="section-icon-box truck">
+                <i data-lucide="truck"></i>
+              </div>
+              <div>
+                <h3 class="section-title">Driver & Vehicle Dispatch Logistics</h3>
+                <p class="section-subtitle">Vehicle telematics linking, container pairing, and route manifest tracking</p>
+              </div>
+            </div>
+            <div class="privacy-guarantee-pill logistics">
+              <i data-lucide="map-pin"></i> GPS Transit Track
+            </div>
+          </div>
+
+          <form id="driverAssignForm" class="kcc-form">
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="truckId">Truck Registration ID <span class="req">*</span></label>
+                <div class="input-icon-wrap">
+                  <i data-lucide="credit-card"></i>
+                  <input type="text" id="truckId" placeholder="e.g. TN-72-AB-1234" required autocomplete="off">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="driverName">Driver Full Name <span class="req">*</span></label>
+                <div class="input-icon-wrap">
+                  <i data-lucide="user-check"></i>
+                  <input type="text" id="driverName" placeholder="e.g. K. Selvaraj" required autocomplete="name">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="driverPhone">Driver Phone Number</label>
+                <div class="input-icon-wrap">
+                  <i data-lucide="phone-call"></i>
+                  <input type="tel" id="driverPhone" placeholder="+91 97890 12345" autocomplete="tel">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="assignedContainerId">Assigned Container ID</label>
+                <input type="text" id="assignedContainerId" value="KCC-001" readonly class="input-readonly">
+              </div>
+            </div>
+
+            <div class="form-row two-col">
+              <div class="form-group">
+                <label for="sourceLocation">Source Agri Hub</label>
+                <input type="text" id="sourceLocation" value="Theni Agri Cold Hub" class="glass-text-input">
+              </div>
+
+              <div class="form-group">
+                <label for="destinationRoute">Destination Route Terminal <span class="req">*</span></label>
+                <input type="text" id="destinationRoute" placeholder="e.g. Chennai Port Cold Storage Terminal" required class="glass-text-input">
+              </div>
+            </div>
+
+            <div class="form-action-row">
+              <button type="submit" class="btn-primary logistics" id="btnSubmitDriverAssign">
+                <i data-lucide="navigation"></i> Dispatch Cold-Chain Trip Manifest
+              </button>
+            </div>
+          </form>
+
+          <!-- Active Dispatch Card -->
+          <div class="active-trip-card" id="activeTripCard">
+            <div class="trip-header">
+              <div class="trip-title-box">
+                <span class="trip-id" id="tripIdText">TRIP-KCC-9021</span>
+                <span class="status-tag transit">IN TRANSIT</span>
+              </div>
+              <span class="trip-truck" id="tripTruckText">Truck: TN-72-AB-1234</span>
+            </div>
+
+            <div class="trip-route-progress">
+              <div class="route-point">
+                <span class="route-city" id="tripSourceCity">Theni Cold Hub</span>
+                <span class="route-time">Dispatched 06:00 AM</span>
+              </div>
+              <div class="route-line-wrap">
+                <div class="route-line-fill" id="tripRouteFill" style="width: 48%;"></div>
+                <i data-lucide="truck" class="truck-progress-icon"></i>
+              </div>
+              <div class="route-point right">
+                <span class="route-city" id="tripDestCity">Chennai Port Cold Storage</span>
+                <span class="route-time">ETA: 02:30 PM</span>
+              </div>
+            </div>
+
+            <div class="trip-meta-grid">
+              <div class="trip-meta-item">
+                <span class="tm-lbl">Driver:</span>
+                <span class="tm-val" id="tripDriverText">K. Selvaraj</span>
+              </div>
+              <div class="trip-meta-item">
+                <span class="tm-lbl">Avg Speed:</span>
+                <span class="tm-val" id="tripSpeedText">58.4 km/h</span>
+              </div>
+              <div class="trip-meta-item">
+                <span class="tm-lbl">Shock Events:</span>
+                <span class="tm-val alert-count" id="tripShockCount">1 Incident (0.42G)</span>
+              </div>
+              <div class="trip-meta-item">
+                <span class="tm-lbl">RF Uplink:</span>
+                <span class="tm-val green">LoRa 433MHz Locked</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 5. OUTBOUND LORA 433MHz & AUTOMATED FARMER ADVISORY SMS STREAM -->
+    <section class="advisory-section" aria-label="Outbound LoRa and Automated SMS Advisory Console">
+      <div class="glass-card terminal-card">
+        <div class="section-card-header terminal-header">
+          <div class="header-left">
+            <div class="section-icon-box dark">
+              <i data-lucide="terminal"></i>
+            </div>
+            <div>
+              <h3 class="section-title text-white">Outbound LoRa 433MHz & Automated Farmer Advisory SMS Log</h3>
+              <p class="section-subtitle text-gray">Real-time downlink telemetry packets, agronomic shelf-life warnings, and automated SMS broadcasts</p>
+            </div>
+          </div>
+          <div class="terminal-controls">
+            <button class="terminal-btn active" data-filter="all" id="filterAll">ALL LOGS</button>
+            <button class="terminal-btn" data-filter="LORA" id="filterLora">LoRa RF (433MHz)</button>
+            <button class="terminal-btn" data-filter="SMS" id="filterSms">Farmer SMS</button>
+            <button class="terminal-btn" data-filter="ALARM" id="filterAlarms">Critical Alarms</button>
+            <button class="terminal-btn clear" id="btnClearLogs" title="Clear console output"><i data-lucide="trash-2"></i></button>
+          </div>
+        </div>
+
+        <!-- Terminal Output Stream -->
+        <div class="terminal-body" id="terminalOutput">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <div class="terminal-footer">
+          <span class="terminal-status"><span class="pulse-dot green"></span> SX1278 SPI Transceiver Listening on 433.000 MHz | Sync Word: 0x34 | TX Power: 17 dBm</span>
+          <span class="terminal-baud">Buffer: SPIFFS Auto-Flush Enabled</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-left">
+        <div class="footer-brand">
+          <i data-lucide="snowflake"></i>
+          <span>Kisan Cool Container (KCC) System</span>
+        </div>
+        <p class="footer-desc">End-to-End Smart Agricultural Cold-Chain & Rural Asset Logistics with Hardware ESP32, LoRa SX1278 (433 MHz), and Client-Side SHA-256 Privacy Architecture.</p>
+      </div>
+
+      <div class="footer-specs">
+        <div class="spec-col">
+          <h4>Hardware Stack</h4>
+          <ul>
+            <li>ESP32 Dual-Core (240 MHz)</li>
+            <li>SX1278 LoRa 433 MHz (SPI)</li>
+            <li>DHT22 Temp & Humidity Sensor</li>
+            <li>MQ-Series Ethylene Gas ADC</li>
+            <li>MPU6050 6-DOF IMU (I2C)</li>
+          </ul>
+        </div>
+        <div class="spec-col">
+          <h4>Software & Security</h4>
+          <ul>
+            <li>Node.js Express + Native WebSockets</li>
+            <li>SHA-256 Cryptographic PII Masking</li>
+            <li>Q10 Agronomic Spoilage Kinetics</li>
+            <li>SPIFFS Circular Flash Buffer Ring</li>
+            <li>Glassmorphic CSS3 Design System</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Kisan Cool Container Systems. All Rights Reserved. Designed for Rural Farmers & Logistics Transporters.</span>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+
+</body>
+</html>

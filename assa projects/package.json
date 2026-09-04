@@ -1,0 +1,26 @@
+{
+  "name": "kisan-cool-container",
+  "version": "1.0.0",
+  "description": "Agricultural Cold-Chain & Asset Logistics IoT System with ESP32, LoRa 433MHz, Farmer Privacy, and Glassmorphic Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  },
+  "keywords": [
+    "iot",
+    "esp32",
+    "lora-433mhz",
+    "agriculture",
+    "cold-chain",
+    "telemetry",
+    "farmer-privacy"
+  ],
+  "author": "Kisan Cool Container Systems",
+  "license": "MIT"
+}
